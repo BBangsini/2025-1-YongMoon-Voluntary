@@ -7,7 +7,7 @@
     body {
       margin: 0;
       background-color: #111;
-      font-family: sans-serif;
+      font-family: sans-serif;ㅇㄴ
       color: white;
       overflow: hidden;
     }
@@ -96,7 +96,7 @@
 </head>
 <body>
 
-<div id="topNotice">🛡️ 몬스터를 처치해야 게시물을 열람할 수 있습니다.</div>
+<div id="topNotice">*방신우의 블로그*  🛡️ 몬스터를 처치해야 게시물을 열람할 수 있습니다. wasd로 움직이세요.</div>
 
 <canvas id="gameCanvas" width="800" height="500"></canvas>
 
@@ -143,7 +143,7 @@
       x: 600,
       y: 100,
       title: "내 취미",
-      description: "취미: 스케이트(나름 전 선수), 롤(요즘 안함), 발로란트(요즘 자주함), 그 외 콘솔게임도 즐겨함",
+      description: "취미: 스케이트(나름 전 선출), 롤(요즘 안함), 발로란트(요즘 자주함), 그 외 콘솔게임도 즐겨함",
       unlocked: false,
     },
   ];
@@ -254,7 +254,7 @@
     log(`플레이어의 공격! ${dmg}의 데미지!`);
 
     if (currentMonster.hp <= 0) {
-      log(`${currentMonster.name} 처치! 아이템 획득!`);
+      log(`${currentMonster.name} 처치! 아이템 획득! 아이템을 사용해 HP를 회복하세요!`);
       currentMonster.alive = false;
       player.items += 1;
 
@@ -274,7 +274,7 @@
   function monsterAttack() {
     if (!inBattle) return;
 
-    const dmg = Math.floor(Math.random() * 3) + 3;
+    const dmg = Math.floor(Math.random() * 3) + 2;
     player.hp -= dmg;
     log(`${currentMonster.name}의 반격! ${dmg}의 피해!`);
 
