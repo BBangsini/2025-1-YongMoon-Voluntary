@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>방신우 블로그 게임</title>
+  <style>
+    body {
+      margin: 0;
+      background-color: #111;
+      font-family: sans-serif;
+      color: white;
+      overflow: hidden;
+    }
+
+    canvas {
+      background-color: #222;
+      display: block;
+      margin: 50px auto 0 auto;
+      border: 1px solid #444;
+    }
+
+    #topNotice {
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #ffcc00;
+      font-weight: bold;
+      font-size: 18px;
+      z-index: 20;
+      user-select: none;
+    }
+
+    #battleBox, #infoBox {
+      position: absolute;
+      top: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #333;
+      border: 2px solid #999;
+      padding: 20px;
+      z-index: 10;
+      display: none;
+      color: white;
+      box-sizing: border-box;
+      border-radius: 8px;
+      font-size: 14px;
+      max-width: 90vw;
+    }
+
+    #battleBox {
+      width: 320px;
+    }
+
+    #infoBox {
+      width: 520px;
+      top: 80px;
+    }
+
+    #battleBox button {
+      margin: 5px 10px 5px 0;
+      padding: 10px 14px;
+      background-color: #555;
+      border: none;
+      color: white;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+    }
+    #battleBox button:hover {
+      background-color: #777;
+    }
+
+    #battleLog {
+      margin-top: 10px;
+      min-height: 40px;
+      color: #ccc;
+      white-space: pre-wrap;
+    }
+
+    #closeInfo {
+      margin-top: 15px;
+      padding: 6px 14px;
+      background: #666;
+      border: none;
+      color: white;
+      cursor: pointer;
+      border-radius: 4px;
+      float: right;
+      transition: background-color 0.2s;
+    }
+    #closeInfo:hover {
+      background-color: #888;
+    }
+  </style>
+</head>
+<body>
+
+<div id="topNotice">🛡️ 몬스터를 처치해야 게시물을 열람할 수 있습니다.</div>
+
+<canvas id="gameCanvas" width="800" height="500"></canvas>
+
+<!-- 전투창 -->
+<div id="battleBox">
+  <div id="battleInfo"></div>
+  <div>🎒 아이템 수: <span id="itemCount">0</span></div>
+  <button onclick="attack()">공격</button>
+  <button onclick="useItem()">아이템</button>
+  <button onclick="runAway()">도망</button>
+  <div id="battleLog"></div>
+</div>
+
+<!-- 설명창 -->
+<div id="infoBox">
+  <h2 id="infoTitle">게시물 제목</h2>
+  <p id="infoDescription">게시물 설명은 여기에 들어갈 예정입니다.</p>
+  <button id="closeInfo" onclick="closeInfo()">닫기</button>
+</div>
+
+<script>
+  const canvas = document.getElementById("gameCanvas");
+  const ctx = canvas.getContext("2d");
+
+  let player = { x: 100, y: 100, size: 30, hp: 20, items: 0 };
+  const speed = 4.5;
+
+  const posts = [
+    {
+      x: 150,
+      y: 100,
+      title: "좋아하는것",
+      description: "좋아하는것: 게임, 체육, 애니메이션, 컴퓨터, 음악, 소설책, 치킨",
+      unlocked: false,
+    },
+    {
+      x: 350,
+      y: 250,
+      title: "싫어하는 것",
+      description: "싫어하는것: 토마토, 덥고 습한 날씨",
+      unlocked: false,
+    },
+    {
+      x: 600,
+      y: 100,
+      title: "내 취미",
+      description: "취미: 스케이트(나름 전 선수), 롤(요즘 안함), 발로란트(요즘 자주함), 그 외 콘솔게임도 즐겨함",
+      unlocked: false,
+    },
+  ];
+
+  const monsters = [
+    { x: 150, y: 160, name: "몬스터 A", hp: 20, alive: true },
+    { x: 350, y: 310, name: "몬스터 B", hp: 20, alive: true },
+    { x: 600, y: 160, name: "몬스터 C", hp: 20, alive: true },
+  ];
+
+  let keys = {};
+  let inBattle = false;
+  let inInfo = false;
+  let currentMonster = null;
+
+  document.addEventListener("keydown", (e) => {
+    keys[e.key.toLowerCase()] = true;
+  });
+  document.addEventListener("keyup", (e) => {
+    keys[e.key.toLowerCase()] = false;
+  });
+
+  function movePlayer() {
+    if (inBattle) return;  // 전투중일 때만 이동 제한
+
+    if (keys["w"] || keys["arrowup"]) player.y -= speed;
+    if (keys["s"] || keys["arrowdown"]) player.y += speed;
+    if (keys["a"] || keys["arrowleft"]) player.x -= speed;
+    if (keys["d"] || keys["arrowright"]) player.x += speed;
+
+    player.x = Math.max(0, Math.min(canvas.width - player.size, player.x));
+    player.y = Math.max(0, Math.min(canvas.height - player.size, player.y));
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.font = "16px sans-serif";
+    ctx.textBaseline = "middle";
+
+    posts.forEach((post) => {
+      ctx.fillStyle = post.unlocked ? "#88f" : "#555";
+      ctx.fillRect(post.x, post.y, 100, 40);
+      ctx.fillStyle = "white";
+      ctx.fillText(post.title, post.x + 10, post.y + 20);
+    });
+
+    monsters.forEach((mon) => {
+      if (!mon.alive) return;
+      ctx.fillStyle = "#aa4444";
+      ctx.fillRect(mon.x, mon.y, 100, 40);
+      ctx.fillStyle = "white";
+      ctx.fillText(mon.name, mon.x + 10, mon.y + 20);
+    });
+
+    ctx.fillStyle = "#4af";
+    ctx.fillRect(player.x, player.y, player.size, player.size);
+  }
+
+  function checkCollision() {
+    if (inBattle) return;
+
+    monsters.forEach((mon) => {
+      if (!mon.alive) return;
+      if (
+        player.x < mon.x + 100 &&
+        player.x + player.size > mon.x &&
+        player.y < mon.y + 40 &&
+        player.y + player.size > mon.y
+      ) {
+        enterBattle(mon);
+      }
+    });
+
+    posts.forEach((post) => {
+      if (
+        player.x < post.x + 100 &&
+        player.x + player.size > post.x &&
+        player.y < post.y + 40 &&
+        player.y + player.size > post.y
+      ) {
+        if (post.unlocked) {
+          showInfo(post);
+        }
+      }
+    });
+  }
+
+  function enterBattle(mon) {
+    inBattle = true;
+    currentMonster = mon;
+    document.getElementById("battleBox").style.display = "block";
+    updateBattleInfo();
+  }
+
+  function updateBattleInfo() {
+    if (!currentMonster) return;
+    document.getElementById("battleInfo").innerHTML =
+      `🧍‍♂️ 플레이어 HP: ${player.hp} <br> 👾 ${currentMonster.name} HP: ${currentMonster.hp}`;
+    document.getElementById("itemCount").textContent = player.items;
+  }
+
+  function attack() {
+    if (!inBattle) return;
+
+    const dmg = Math.floor(Math.random() * 5) + 5;
+    currentMonster.hp -= dmg;
+    log(`플레이어의 공격! ${dmg}의 데미지!`);
+
+    if (currentMonster.hp <= 0) {
+      log(`${currentMonster.name} 처치! 아이템 획득!`);
+      currentMonster.alive = false;
+      player.items += 1;
+
+      const index = monsters.indexOf(currentMonster);
+      if (posts[index]) {
+        posts[index].unlocked = true;
+      }
+
+      currentMonster.hp = 0;
+      endBattle();
+      return;
+    }
+
+    monsterAttack();
+  }
+
+  function monsterAttack() {
+    if (!inBattle) return;
+
+    const dmg = Math.floor(Math.random() * 3) + 3;
+    player.hp -= dmg;
+    log(`${currentMonster.name}의 반격! ${dmg}의 피해!`);
+
+    if (player.hp <= 0) {
+      log("플레이어가 쓰러졌습니다... 게임 오버!");
+      endBattle();
+    }
+
+    updateBattleInfo();
+  }
+
+  function useItem() {
+    if (!inBattle) return;
+
+    if (player.items > 0 && player.hp < 20) {
+      player.hp = Math.min(player.hp + 10, 20);
+      player.items -= 1;
+      log("아이템 사용! HP 10 회복!");
+    } else {
+      log("아이템이 없거나 체력이 가득 찼습니다.");
+    }
+    monsterAttack();
+  }
+
+  function runAway() {
+    if (!inBattle) return;
+
+    log("도망쳤습니다!");
+
+    if (currentMonster) {
+      player.x = currentMonster.x - player.size - 10;
+      player.y = currentMonster.y;
+
+      player.x = Math.max(0, Math.min(canvas.width - player.size, player.x));
+      player.y = Math.max(0, Math.min(canvas.height - player.size, player.y));
+    }
+
+    endBattle();
+  }
+
+  function log(msg) {
+    const battleLog = document.getElementById("battleLog");
+    battleLog.innerHTML = msg;
+  }
+
+  function endBattle() {
+    inBattle = false;
+    currentMonster = null;
+    document.getElementById("battleBox").style.display = "none";
+    updateBattleInfo();
+  }
+
+  function showInfo(post) {
+    inInfo = true;
+    document.getElementById("infoTitle").textContent = post.title;
+    document.getElementById("infoDescription").textContent = post.description;
+    document.getElementById("infoBox").style.display = "block";
+  }
+
+  function closeInfo() {
+    inInfo = false;
+    document.getElementById("infoBox").style.display = "none";
+  }
+
+  function gameLoop() {
+    movePlayer();
+    draw();
+    checkCollision();
+    requestAnimationFrame(gameLoop);
+  }
+
+  gameLoop();
+</script>
+
+</body>
+</html>
